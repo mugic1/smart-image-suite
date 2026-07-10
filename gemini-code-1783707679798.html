@@ -1,0 +1,424 @@
+---
+layout: null
+title: Smart Image Suite
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Image Suite - Compress & Resize</title>
+    
+    <!-- PWA Setup (Using Relative Paths) -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --success: #10b981;
+            --success-hover: #059669;
+            --background: #f3f4f6;
+            --card-bg: #ffffff;
+            --text: #1f2937;
+            --border: #d1d5db;
+            --slate-500: #6b7280;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .app-container {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 750px;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+
+        .app-header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .app-title {
+            margin: 0;
+            color: var(--primary);
+            font-size: 1.8rem;
+            font-weight: 800;
+        }
+
+        .app-subtitle {
+            margin: 5px 0 0 0;
+            color: var(--slate-500);
+            font-size: 0.95rem;
+        }
+
+        .back-btn {
+            position: absolute;
+            left: 0;
+            top: 5px;
+            background: #e0e7ff;
+            color: var(--primary);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: none;
+        }
+        .back-btn:hover { background: #c7d2fe; }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .back-btn { position: relative; display: block; margin-bottom: 15px; width: fit-content; }
+        }
+
+        .tool-card {
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .tool-card:hover {
+            border-color: var(--primary);
+            background: #f5f7ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
+        }
+
+        .tool-icon { font-size: 2.5rem; margin-bottom: 12px; }
+        .tool-card h3 { margin: 0 0 8px 0; color: #111827; font-size: 1.2rem; }
+        .tool-card p { margin: 0; font-size: 0.85rem; color: var(--slate-500); line-height: 1.4; }
+
+        .app-view { display: none; }
+        .app-view.active { display: block; }
+
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; }
+        input[type="file"], input[type="number"], select {
+            width: 100%; padding: 11px; border: 1px solid var(--border);
+            border-radius: 6px; box-sizing: border-box; font-size: 1rem; background-color: #fff;
+        }
+
+        button.main-action-btn {
+            width: 100%; padding: 12px; background-color: var(--primary); color: white;
+            border: none; border-radius: 6px; font-size: 1rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+        }
+        button.main-action-btn:hover { background-color: var(--primary-hover); }
+        button.main-action-btn:disabled { background-color: #9ca3af; cursor: not-allowed; }
+
+        .file-list-card { margin-top: 25px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; overflow: hidden; }
+        .file-list-header { display: grid; grid-template-columns: 2.5fr 1fr 1.2fr 1fr; background: #eeeff1; padding: 12px; font-weight: 600; font-size: 0.85rem; color: #4b5563; border-bottom: 1px solid #e5e7eb; }
+        .file-list-rows { max-height: 250px; overflow-y: auto; }
+        .file-row { display: grid; grid-template-columns: 2.5fr 1fr 1.2fr 1fr; padding: 12px; font-size: 0.9rem; align-items: center; border-bottom: 1px solid #e5e7eb; background: #fff; }
+        .file-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 10px; }
+        .status-badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-align: center; }
+        .status-pending { background: #e5e7eb; color: #4b5563; }
+        .status-loading { background: #dbeafe; color: #2563eb; }
+        .row-download-btn { background: var(--success); color: white; border: none; padding: 5px 8px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; text-decoration: none; display: inline-block; }
+        #downloadAllBtn { background-color: var(--success); margin-top: 15px; display: none; }
+        #downloadAllBtn:hover { background-color: var(--success-hover); }
+
+        .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .icon-preset-btn { background: #f3f4f6; border: 1px solid var(--border); padding: 10px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-align: center; }
+        .icon-preset-btn:hover { border-color: var(--primary); background: #e0e7ff; color: var(--primary); }
+        .icon-preset-btn span { display: block; font-size: 0.7rem; color: var(--slate-500); font-weight: 400; margin-top: 2px; }
+        .file-info-badge { margin-top: 8px; padding: 8px 12px; background: #eff6ff; border: 1px dashed #bfdbfe; color: #1e40af; border-radius: 6px; font-size: 0.85rem; display: none; }
+        .result-box { margin-top: 25px; background: #f9fafb; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; text-align: center; display: none; }
+        .preview-box { background: #eee; border-radius: 6px; overflow: hidden; width: 140px; height: 140px; margin: 15px auto; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; }
+        #resizerPreviewImg { max-width: 100%; max-height: 100%; object-fit: contain; }
+        #resizerDownloadBtn { background-color: var(--success); }
+        #resizerDownloadBtn:hover { background-color: var(--success-hover); }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="app-header">
+        <button class="back-btn" id="backToHomeBtn">← Dashboard</button>
+        <h2 class="app-title" id="appMainTitle">Smart Image Suite</h2>
+        <p class="app-subtitle" id="appMainSubtitle">Fully Client-Side Batch Compressor & Dimension Resizer</p>
+    </div>
+
+    <!-- VIEW 1: HOME SCREEN -->
+    <div class="app-view active" id="viewHome">
+        <div class="dashboard-grid">
+            <div class="tool-card" id="cardGoToCompressor">
+                <div class="tool-icon">🗜️</div>
+                <h3>Batch Compressor</h3>
+                <p>Reduce file sizes down to specific KB limits for multiple images simultaneously.</p>
+            </div>
+            <div class="tool-card" id="cardGoToResizer">
+                <div class="tool-icon">📐</div>
+                <h3>Dimension Resizer</h3>
+                <p>Convert dimensions safely to 512x512, 192x192, or custom pixels with Smart Crop.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW 2: COMPRESSOR -->
+    <div class="app-view" id="viewCompressor">
+        <div class="form-group">
+            <label for="compImageInput">Choose Images (Multiple Allowed)</label>
+            <input type="file" id="compImageInput" accept="image/*" multiple>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="compTargetSize">Target Max Size (KB)</label>
+                <input type="number" id="compTargetSize" value="500" min="5">
+            </div>
+            <div class="form-group">
+                <label for="compOutputFormat">Convert To</label>
+                <select id="compOutputFormat">
+                    <option value="image/jpeg">JPEG (.jpg)</option>
+                    <option value="image/png">PNG (.png)</option>
+                    <option value="image/webp">WEBP (.webp)</option>
+                </select>
+            </div>
+        </div>
+        <button id="compStartBtn" class="main-action-btn" disabled>Compress All Images</button>
+        <button id="downloadAllBtn" class="main-action-btn">Download All Compressed Images</button>
+
+        <div class="file-list-card" id="compFileListCard" style="display: none;">
+            <div class="file-list-header">
+                <div>FILE NAME</div>
+                <div>ORIGINAL</div>
+                <div>COMPRESSED</div>
+                <div>ACTION</div>
+            </div>
+            <div class="file-list-rows" id="compFileListRows"></div>
+        </div>
+    </div>
+
+    <!-- VIEW 3: RESIZER -->
+    <div class="app-view" id="viewResizer">
+        <div class="form-group">
+            <label for="resizerImageInput">Choose Base Image</label>
+            <input type="file" id="resizerImageInput" accept="image/*">
+            <div id="resizerFileInfoBadge" class="file-info-badge"></div>
+        </div>
+        <label>Quick PWA Icon Presets</label>
+        <div class="preset-grid">
+            <button class="icon-preset-btn" id="resizerPreset192">192 x 192 px<span>Standard PWA Icon</span></button>
+            <button class="icon-preset-btn" id="resizerPreset512">512 x 512 px<span>Splash Screen Icon</span></button>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="resizerWidthInput">Custom Width (Pixels)</label>
+                <input type="number" id="resizerWidthInput" min="1" disabled>
+            </div>
+            <div class="form-group">
+                <label for="resizerHeightInput">Custom Height (Pixels)</label>
+                <input type="number" id="resizerHeightInput" min="1" disabled>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="resizerFittingMode">Fitting Mode</label>
+            <select id="resizerFittingMode" disabled>
+                <option value="crop">Smart Center Crop (No Stretch)</option>
+                <option value="aspect">Maintain Aspect Ratio</option>
+                <option value="stretch">Force Stretch</option>
+            </select>
+        </div>
+        <button id="resizerStartBtn" class="main-action-btn" disabled>Generate Resized Image</button>
+
+        <div class="result-box" id="resizerResultBox">
+            <p style="margin-top:0; font-weight:600; color:var(--success);">Image Resized Successfully!</p>
+            <p id="resizerNewDimensionsText" style="font-size:0.9rem; color:#4b5563; font-weight:700;"></p>
+            <div class="preview-box"><img id="resizerPreviewImg" alt="Resized Preview"></div>
+            <button id="resizerDownloadBtn" class="main-action-btn">Download Resized Image</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const viewHome = document.getElementById('viewHome');
+    const viewCompressor = document.getElementById('viewCompressor');
+    const viewResizer = document.getElementById('viewResizer');
+    const backBtn = document.getElementById('backToHomeBtn');
+    const appMainTitle = document.getElementById('appMainTitle');
+    const appMainSubtitle = document.getElementById('appMainSubtitle');
+    const cardGoToCompressor = document.getElementById('cardGoToCompressor');
+    const cardGoToResizer = document.getElementById('cardGoToResizer');
+
+    function navigateTo(viewName) {
+        viewHome.classList.remove('active'); viewCompressor.classList.remove('active'); viewResizer.classList.remove('active');
+        if(viewName === 'home') {
+            viewHome.classList.add('active'); backBtn.style.display = 'none';
+            appMainTitle.innerText = "Smart Image Suite"; appMainSubtitle.innerText = "Fully Client-Side Batch Compressor & Dimension Resizer";
+        } else if(viewName === 'compressor') {
+            viewCompressor.classList.add('active'); backBtn.style.display = 'block';
+            appMainTitle.innerText = "Batch Image Compressor"; appMainSubtitle.innerText = "Compress file size of multiple images down to standard limits";
+        } else if(viewName === 'resizer') {
+            viewResizer.classList.add('active'); backBtn.style.display = 'block';
+            appMainTitle.innerText = "Image Resizer & Icon Generator"; appMainSubtitle.innerText = "Resize width and height dimensions safely without any distortion";
+        }
+    }
+
+    cardGoToCompressor.addEventListener('click', () => navigateTo('compressor'));
+    cardGoToResizer.addEventListener('click', () => navigateTo('resizer'));
+    backBtn.addEventListener('click', () => navigateTo('home'));
+
+    // --- COMPRESSOR ENGINE ---
+    const compImageInput = document.getElementById('compImageInput');
+    const compTargetSize = document.getElementById('compTargetSize');
+    const compOutputFormat = document.getElementById('compOutputFormat');
+    const compStartBtn = document.getElementById('compStartBtn');
+    const downloadAllBtn = document.getElementById('downloadAllBtn');
+    const compFileListCard = document.getElementById('compFileListCard');
+    const compFileListRows = document.getElementById('compFileListRows');
+    let compressorBatchArray = [];
+
+    compImageInput.addEventListener('change', (e) => {
+        const files = e.target.files; if (files.length === 0) { compFileListCard.style.display = 'none'; compStartBtn.disabled = true; return; }
+        compressorBatchArray = []; compFileListRows.innerHTML = ''; compFileListCard.style.display = 'block'; downloadAllBtn.style.display = 'none';
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i]; const sizeInKB = file.size / 1024;
+            const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+            compressorBatchArray.push({ file: file, baseName: baseName, sizeInKB: sizeInKB, compressedBlob: null });
+            const row = document.createElement('div'); row.className = 'file-row';
+            row.innerHTML = `<div class="file-name" title="${file.name}">${file.name}</div><div>${sizeInKB.toFixed(1)} KB</div><div id="comp-row-size-${i}"><span class="status-badge status-pending">Pending</span></div><div id="comp-row-action-${i}">-</div>`;
+            compFileListRows.appendChild(row);
+        }
+        compStartBtn.disabled = false; compStartBtn.innerText = `Compress All (${files.length} Files)`;
+    });
+
+    compStartBtn.addEventListener('click', async () => {
+        compStartBtn.disabled = true; compStartBtn.innerText = "Processing...";
+        const targetKB = parseFloat(compTargetSize.value); const format = compOutputFormat.value;
+        const extension = format === 'image/jpeg' ? 'jpg' : format === 'image/png' ? 'png' : 'webp';
+
+        for (let i = 0; i < compressorBatchArray.length; i++) {
+            document.getElementById(`comp-row-size-${i}`).innerHTML = `<span class="status-badge status-loading">Processing...</span>`;
+            const result = await new Promise((resolve) => {
+                const img = new Image(); img.src = URL.createObjectURL(compressorBatchArray[i].file);
+                img.onload = async () => {
+                    const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
+                    let bestBlob = null; let minQual = 0.05, maxQual = 1.0;
+                    canvas.width = img.width; canvas.height = img.height;
+                    for (let q = 0; q < 6; q++) {
+                        let mid = (minQual + maxQual) / 2; ctx.drawImage(img, 0, 0);
+                        let blob = await new Promise(r => canvas.toBlob(r, format, format==='image/png'?undefined:mid));
+                        if ((blob.size/1024) <= targetKB) { bestBlob = blob; minQual = mid; } else { maxQual = mid; }
+                    }
+                    if(!bestBlob) { ctx.drawImage(img,0,0); bestBlob = await new Promise(r => canvas.toBlob(r, format, 0.2)); }
+                    resolve(bestBlob);
+                };
+            });
+            compressorBatchArray[i].compressedBlob = result;
+            document.getElementById(`comp-row-size-${i}`).innerHTML = `<strong style="color:var(--success);">${(result.size/1024).toFixed(1)} KB</strong>`;
+            document.getElementById(`comp-row-action-${i}`).innerHTML = `<a href="${URL.createObjectURL(result)}" download="${compressorBatchArray[i].baseName}_compressed.${extension}" class="row-download-btn">Get</a>`;
+        }
+        compStartBtn.innerText = "Completed!"; downloadAllBtn.style.display = "block";
+    });
+
+    downloadAllBtn.addEventListener('click', () => {
+        const extension = compOutputFormat.value === 'image/jpeg' ? 'jpg' : compOutputFormat.value === 'image/png' ? 'png' : 'webp';
+        compressorBatchArray.forEach(item => {
+            if(item.compressedBlob) {
+                const a = document.createElement('a'); a.href = URL.createObjectURL(item.compressedBlob);
+                a.download = `${item.baseName}_compressed.${extension}`; a.click();
+            }
+        });
+    });
+
+    // --- RESIZER ENGINE ---
+    const resizerImageInput = document.getElementById('resizerImageInput');
+    const resizerFileInfoBadge = document.getElementById('resizerFileInfoBadge');
+    const resizerWidthInput = document.getElementById('resizerWidthInput');
+    const resizerHeightInput = document.getElementById('resizerHeightInput');
+    const resizerFittingMode = document.getElementById('resizerFittingMode');
+    const resizerStartBtn = document.getElementById('resizerStartBtn');
+    const resizerResultBox = document.getElementById('resizerResultBox');
+    const resizerPreviewImg = document.getElementById('resizerPreviewImg');
+    const resizerDownloadBtn = document.getElementById('resizerDownloadBtn');
+    const resizerNewDimensionsText = document.getElementById('resizerNewDimensionsText');
+    let resizerOriginalImage = null, resizerOrigWidth = 0, resizerOrigHeight = 0, resizerAspectRatio = 1, resizerBaseFileName = "icon", resizerFileExtension = "png";
+
+    resizerImageInput.addEventListener('change', (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        resizerBaseFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        resizerFileExtension = file.name.split('.').pop();
+        const reader = new FileReader();
+        reader.onload = (el) => {
+            resizerOriginalImage = new Image();
+            resizerOriginalImage.onload = () => {
+                resizerOrigWidth = resizerOriginalImage.width; resizerOrigHeight = resizerOriginalImage.height; resizerAspectRatio = resizerOrigWidth / resizerOrigHeight;
+                resizerWidthInput.value = resizerOrigWidth; resizerHeightInput.value = resizerOrigHeight;
+                resizerWidthInput.disabled = false; resizerHeightInput.disabled = false; resizerFittingMode.disabled = false; resizerStartBtn.disabled = false;
+                resizerFileInfoBadge.innerHTML = `<strong>Original Size:</strong> ${resizerOrigWidth} x ${resizerOrigHeight} px`; resizerFileInfoBadge.style.display = 'block';
+            };
+            resizerOriginalImage.src = el.target.result;
+        };
+        reader.readAsDataURL(file); resizerResultBox.style.display = 'none';
+    });
+
+    document.getElementById('resizerPreset192').addEventListener('click', () => { if(!resizerOriginalImage) return; resizerWidthInput.value=192; resizerHeightInput.value=192; resizerFittingMode.value="crop"; });
+    document.getElementById('resizerPreset512').addEventListener('click', () => { if(!resizerOriginalImage) return; resizerWidthInput.value=512; resizerHeightInput.value=512; resizerFittingMode.value="crop"; });
+
+    let resizerBlobUrl = null;
+    resizerStartBtn.addEventListener('click', () => {
+        const targetW = parseInt(resizerWidthInput.value); const targetH = parseInt(resizerHeightInput.value);
+        const canvas = document.createElement('canvas'); canvas.width = targetW; canvas.height = targetH;
+        const ctx = canvas.getContext('2d');
+        if (resizerFittingMode.value === 'crop') {
+            let scale = Math.max(targetW / resizerOrigWidth, targetH / resizerOrigHeight);
+            let sW = targetW / scale; let sH = targetH / scale;
+            ctx.drawImage(resizerOriginalImage, (resizerOrigWidth - sW)/2, (resizerOrigHeight - sH)/2, sW, sH, 0, 0, targetW, targetH);
+        } else { ctx.drawImage(resizerOriginalImage, 0, 0, targetW, targetH); }
+        
+        let mime = resizerFileExtension.toLowerCase() === 'png' ? 'image/png' : 'image/jpeg';
+        canvas.toBlob((b) => {
+            if(resizerBlobUrl) URL.revokeObjectURL(resizerBlobUrl);
+            resizerBlobUrl = URL.createObjectURL(b); resizerPreviewImg.src = resizerBlobUrl;
+            resizerNewDimensionsText.innerText = `${targetW} x ${targetH} px`; resizerResultBox.style.display = 'block';
+        }, mime, 0.95);
+    });
+
+    resizerDownloadBtn.addEventListener('click', () => {
+        const a = document.createElement('a'); a.href = resizerBlobUrl;
+        a.download = `${resizerBaseFileName}_${resizerWidthInput.value}x${resizerHeightInput.value}.${resizerFileExtension}`; a.click();
+    });
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').then(reg => console.log('SW Registered.')); });
+    }
+</script>
+</body>
+</html>
