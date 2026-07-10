@@ -1,0 +1,153 @@
+---
+layout: null
+title: Image Resizer & Icon Generator
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dimension Resizer</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --success: #10b981;
+            --success-hover: #059669;
+            --background: #f3f4f6;
+            --card-bg: #ffffff;
+            --text: #1f2937;
+            --border: #d1d5db;
+            --slate-500: #6b7280;
+        }
+        body { font-family: system-ui, sans-serif; background-color: var(--background); color: var(--text); margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; box-sizing: border-box; }
+        .app-container { background: var(--card-bg); padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 750px; box-sizing: border-box; }
+        .app-header { text-align: center; margin-bottom: 30px; position: relative; }
+        .app-title { margin: 0; color: var(--primary); font-size: 1.8rem; font-weight: 800; }
+        .back-btn { position: absolute; left: 0; top: 5px; background: #e0e7ff; color: var(--primary); border: none; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; text-decoration: none; }
+        .back-btn:hover { background: #c7d2fe; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.9rem; }
+        input[type="file"], input[type="number"], select { width: 100%; padding: 11px; border: 1px solid var(--border); border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+        button.main-action-btn { width: 100%; padding: 12px; background-color: var(--primary); color: white; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        button.main-action-btn:hover { background-color: var(--primary-hover); }
+        button.main-action-btn:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        .preset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .icon-preset-btn { background: #f3f4f6; border: 1px solid var(--border); padding: 10px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-align: center; }
+        .icon-preset-btn:hover { border-color: var(--primary); background: #e0e7ff; color: var(--primary); }
+        .icon-preset-btn span { display: block; font-size: 0.7rem; color: var(--slate-500); font-weight: 400; margin-top: 2px; }
+        .file-info-badge { margin-top: 8px; padding: 8px 12px; background: #eff6ff; border: 1px dashed #bfdbfe; color: #1e40af; border-radius: 6px; font-size: 0.85rem; display: none; }
+        .result-box { margin-top: 25px; background: #f9fafb; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; text-align: center; display: none; }
+        .preview-box { background: #eee; border-radius: 6px; overflow: hidden; width: 140px; height: 140px; margin: 15px auto; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; }
+        #resizerPreviewImg { max-width: 100%; max-height: 100%; object-fit: contain; }
+        #resizerDownloadBtn { background-color: var(--success); }
+        #resizerDownloadBtn:hover { background-color: var(--success-hover); }
+        @media (max-width: 600px) { .back-btn { position: relative; display: block; margin-bottom: 15px; } }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="app-header">
+        <a href="./" class="back-btn">← Home</a>
+        <h2 class="app-title">Dimension Resizer</h2>
+    </div>
+
+    <div class="form-group">
+        <label for="resizerImageInput">Choose Base Image</label>
+        <input type="file" id="resizerImageInput" accept="image/*">
+        <div id="resizerFileInfoBadge" class="file-info-badge"></div>
+    </div>
+    <label>Quick PWA Icon Presets</label>
+    <div class="preset-grid">
+        <button class="icon-preset-btn" id="resizerPreset192">192 x 192 px<span>Standard PWA Icon</span></button>
+        <button class="icon-preset-btn" id="resizerPreset512">512 x 512 px<span>Splash Screen Icon</span></button>
+    </div>
+    <div class="form-row">
+        <div class="form-group">
+            <label for="resizerWidthInput">Custom Width (Pixels)</label>
+            <input type="number" id="resizerWidthInput" min="1" disabled>
+        </div>
+        <div class="form-group">
+            <label for="resizerHeightInput">Custom Height (Pixels)</label>
+            <input type="number" id="resizerHeightInput" min="1" disabled>
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="resizerFittingMode">Fitting Mode</label>
+        <select id="resizerFittingMode" disabled>
+            <option value="crop">Smart Center Crop (No Stretch)</option>
+            <option value="aspect">Maintain Aspect Ratio</option>
+            <option value="stretch">Force Stretch</option>
+        </select>
+    </div>
+    <button id="resizerStartBtn" class="main-action-btn" disabled>Generate Resized Image</button>
+
+    <div class="result-box" id="resizerResultBox">
+        <p style="margin-top:0; font-weight:600; color:var(--success);">Image Resized Successfully!</p>
+        <p id="resizerNewDimensionsText" style="font-size:0.9rem; color:#4b5563; font-weight:700;"></p>
+        <div class="preview-box"><img id="resizerPreviewImg" alt="Resized Preview"></div>
+        <button id="resizerDownloadBtn" class="main-action-btn">Download Resized Image</button>
+    </div>
+</div>
+
+<script>
+    const resizerImageInput = document.getElementById('resizerImageInput');
+    const resizerFileInfoBadge = document.getElementById('resizerFileInfoBadge');
+    const resizerWidthInput = document.getElementById('resizerWidthInput');
+    const resizerHeightInput = document.getElementById('resizerHeightInput');
+    const resizerFittingMode = document.getElementById('resizerFittingMode');
+    const resizerStartBtn = document.getElementById('resizerStartBtn');
+    const resizerResultBox = document.getElementById('resizerResultBox');
+    const resizerPreviewImg = document.getElementById('resizerPreviewImg');
+    const resizerDownloadBtn = document.getElementById('resizerDownloadBtn');
+    const resizerNewDimensionsText = document.getElementById('resizerNewDimensionsText');
+    let resizerOriginalImage = null, resizerOrigWidth = 0, resizerOrigHeight = 0, resizerAspectRatio = 1, resizerBaseFileName = "icon", resizerFileExtension = "png";
+
+    resizerImageInput.addEventListener('change', (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        resizerBaseFileName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        resizerFileExtension = file.name.split('.').pop();
+        const reader = new FileReader();
+        reader.onload = (el) => {
+            resizerOriginalImage = new Image();
+            resizerOriginalImage.onload = () => {
+                resizerOrigWidth = resizerOriginalImage.width; resizerOrigHeight = resizerOriginalImage.height; resizerAspectRatio = resizerOrigWidth / resizerOrigHeight;
+                resizerWidthInput.value = resizerOrigWidth; resizerHeightInput.value = resizerOrigHeight;
+                resizerWidthInput.disabled = false; resizerHeightInput.disabled = false; resizerFittingMode.disabled = false; resizerStartBtn.disabled = false;
+                resizerFileInfoBadge.innerHTML = `<strong>Original Size:</strong> ${resizerOrigWidth} x ${resizerOrigHeight} px`; resizerFileInfoBadge.style.display = 'block';
+            };
+            resizerOriginalImage.src = el.target.result;
+        };
+        reader.readAsDataURL(file); resizerResultBox.style.display = 'none';
+    });
+
+    document.getElementById('resizerPreset192').addEventListener('click', () => { if(!resizerOriginalImage) return; resizerWidthInput.value=192; resizerHeightInput.value=192; resizerFittingMode.value="crop"; });
+    document.getElementById('resizerPreset512').addEventListener('click', () => { if(!resizerOriginalImage) return; resizerWidthInput.value=512; resizerHeightInput.value=512; resizerFittingMode.value="crop"; });
+
+    let resizerBlobUrl = null;
+    resizerStartBtn.addEventListener('click', () => {
+        const targetW = parseInt(resizerWidthInput.value); const targetH = parseInt(resizerHeightInput.value);
+        const canvas = document.createElement('canvas'); canvas.width = targetW; canvas.height = targetH;
+        const ctx = canvas.getContext('2d');
+        if (resizerFittingMode.value === 'crop') {
+            let scale = Math.max(targetW / resizerOrigWidth, targetH / resizerOrigHeight);
+            let sW = targetW / scale; let sH = targetH / scale;
+            ctx.drawImage(resizerOriginalImage, (resizerOrigWidth - sW)/2, (resizerOrigHeight - sH)/2, sW, sH, 0, 0, targetW, targetH);
+        } else { ctx.drawImage(resizerOriginalImage, 0, 0, targetW, targetH); }
+        
+        let mime = resizerFileExtension.toLowerCase() === 'png' ? 'image/png' : 'image/jpeg';
+        canvas.toBlob((b) => {
+            if(resizerBlobUrl) URL.revokeObjectURL(resizerBlobUrl);
+            resizerBlobUrl = URL.createObjectURL(b); resizerPreviewImg.src = resizerBlobUrl;
+            resizerNewDimensionsText.innerText = `${targetW} x ${targetH} px`; resizerResultBox.style.display = 'block';
+        }, mime, 0.95);
+    });
+
+    resizerDownloadBtn.addEventListener('click', () => {
+        const a = document.createElement('a'); a.href = resizerBlobUrl;
+        a.download = `${resizerBaseFileName}_${resizerWidthInput.value}x${resizerHeightInput.value}.${resizerFileExtension}`; a.click();
+    });
+</script>
+</body>
+</html>
