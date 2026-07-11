@@ -33,14 +33,14 @@ title: Batch Image Compressor
         button.main-action-btn:hover { background-color: var(--primary-hover); }
         button.main-action-btn:disabled { background-color: #9ca3af; cursor: not-allowed; }
         .file-list-card { margin-top: 25px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb; overflow: hidden; }
-        .file-list-header { display: grid; grid-template-columns: 2.5fr 1fr 1.2fr 1fr; background: #eeeff1; padding: 12px; font-weight: 600; font-size: 0.85rem; color: #4b5563; border-bottom: 1px solid #e5e7eb; }
+        .file-list-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; background: #eeeff1; padding: 12px; font-weight: 600; font-size: 0.85rem; color: #4b5563; border-bottom: 1px solid #e5e7eb; }
         .file-list-rows { max-height: 250px; overflow-y: auto; }
-        .file-row { display: grid; grid-template-columns: 2.5fr 1fr 1.2fr 1fr; padding: 12px; font-size: 0.9rem; align-items: center; border-bottom: 1px solid #e5e7eb; background: #fff; }
+        .file-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; padding: 12px; font-size: 0.9rem; align-items: center; border-bottom: 1px solid #e5e7eb; background: #fff; }
         .file-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 10px; }
         .status-badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
         .status-pending { background: #e5e7eb; color: #4b5563; }
         .status-loading { background: #dbeafe; color: #2563eb; }
-        .row-download-btn { background: var(--success); color: white; border: none; padding: 5px 8px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; text-decoration: none; }
+        .row-download-btn { background: var(--success); color: white; border: none; padding: 5px 8px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; text-decoration: none; text-align: center; }
         #downloadAllBtn { background-color: var(--success); margin-top: 15px; display: none; }
         #downloadAllBtn:hover { background-color: var(--success-hover); }
         @media (max-width: 600px) { .back-btn { position: relative; display: block; margin-bottom: 15px; } }
@@ -60,14 +60,14 @@ title: Batch Image Compressor
     <div class="form-row">
         <div class="form-group">
             <label for="compTargetSize">Target Max Size (KB)</label>
-            <input type="number" id="compTargetSize" value="500" min="5">
+            <input type="number" id="compTargetSize" value="50" min="2">
         </div>
         <div class="form-group">
             <label for="compOutputFormat">Convert To</label>
             <select id="compOutputFormat">
                 <option value="image/jpeg">JPEG (.jpg)</option>
-                <option value="image/png">PNG (.png)</option>
                 <option value="image/webp">WEBP (.webp)</option>
+                <option value="image/png">PNG (.png - Size might be large)</option>
             </select>
         </div>
     </div>
@@ -112,25 +112,59 @@ title: Batch Image Compressor
         const extension = format === 'image/jpeg' ? 'jpg' : format === 'image/png' ? 'png' : 'webp';
 
         for (let i = 0; i < compressorBatchArray.length; i++) {
-            document.getElementById(`comp-row-size-${i}`).innerHTML = `<span class="status-badge status-loading">Processing...</span>`;
-            const result = await new Promise((resolve) => {
-                const img = new Image(); img.src = URL.createObjectURL(compressorBatchArray[i].file);
+            document.getElementById(`comp-row-size-${i}`).innerHTML = `<span class="status-badge status-loading">Shrinking...</span>`;
+            
+            const resultBlob = await new Promise((resolve) => {
+                const img = new Image();
+                img.src = URL.createObjectURL(compressorBatchArray[i].file);
                 img.onload = async () => {
-                    const canvas = document.createElement('canvas'); const ctx = canvas.getContext('2d');
-                    let bestBlob = null; let minQual = 0.05, maxQual = 1.0;
-                    canvas.width = img.width; canvas.height = img.height;
-                    for (let q = 0; q < 6; q++) {
-                        let mid = (minQual + maxQual) / 2; ctx.drawImage(img, 0, 0);
-                        let blob = await new Promise(r => canvas.toBlob(r, format, format==='image/png'?undefined:mid));
-                        if ((blob.size/1024) <= targetKB) { bestBlob = blob; minQual = mid; } else { maxQual = mid; }
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    let currentWidth = img.width;
+                    let currentHeight = img.height;
+                    let quality = 0.85;
+                    let finalBlob = null;
+                    let attempts = 0;
+
+                    // Deep compression loop that cuts down dimensions if quality adjustments fail
+                    while (attempts < 15) {
+                        canvas.width = currentWidth;
+                        canvas.height = currentHeight;
+                        ctx.clearRect(0, 0, currentWidth, currentHeight);
+                        ctx.drawImage(img, 0, 0, currentWidth, currentHeight);
+
+                        finalBlob = await new Promise(r => canvas.toBlob(r, format, format === 'image/png' ? undefined : quality));
+                        let currentSizeKB = finalBlob.size / 1024;
+
+                        // Check if we hit the target size
+                        if (currentSizeKB <= targetKB) {
+                            break;
+                        }
+
+                        // Step 1: If file is too large, drop quality down to 0.15 first
+                        if (quality > 0.15 && format !== 'image/png') {
+                            quality -= 0.15;
+                        } else {
+                            // Step 2: If quality is already low, forcefully scale down resolution by 25% each loop
+                            currentWidth = Math.floor(currentWidth * 0.75);
+                            currentHeight = Math.floor(currentHeight * 0.75);
+                            if (format !== 'image/png') quality = 0.35; // Reset to reasonable low quality for new dimensions
+                        }
+
+                        // Safety exit if image becomes thumbnail sized
+                        if (currentWidth < 40 || currentHeight < 40) {
+                            break;
+                        }
+                        attempts++;
                     }
-                    if(!bestBlob) { ctx.drawImage(img,0,0); bestBlob = await new Promise(r => canvas.toBlob(r, format, 0.2)); }
-                    resolve(bestBlob);
+                    resolve(finalBlob);
                 };
             });
-            compressorBatchArray[i].compressedBlob = result;
-            document.getElementById(`comp-row-size-${i}`).innerHTML = `<strong style="color:var(--success);">${(result.size/1024).toFixed(1)} KB</strong>`;
-            document.getElementById(`comp-row-action-${i}`).innerHTML = `<a href="${URL.createObjectURL(result)}" download="${compressorBatchArray[i].baseName}_compressed.${extension}" class="row-download-btn">Get</a>`;
+
+            compressorBatchArray[i].compressedBlob = resultBlob;
+            document.getElementById(`comp-row-size-${i}`).innerHTML = `<strong style="color:var(--success);">${(resultBlob.size/1024).toFixed(1)} KB</strong>`;
+            document.getElementById(`comp-row-action-${i}`).innerHTML = `<a href="${URL.createObjectURL(resultBlob)}" download="${compressorBatchArray[i].baseName}_compressed.${extension}" class="row-download-btn">Get</a>`;
         }
         compStartBtn.innerText = "Completed!"; downloadAllBtn.style.display = "block";
     });
