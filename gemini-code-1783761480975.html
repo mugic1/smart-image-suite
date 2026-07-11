@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Target Size Image Compressor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f0f4f8;
+            color: #333;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: #fff;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            max-width: 750px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 8px;
+            color: #1e3a8a;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+
+        .upload-section {
+            border: 2px dashed #3b82f6;
+            padding: 35px;
+            text-align: center;
+            border-radius: 12px;
+            cursor: pointer;
+            background: #eff6ff;
+            transition: 0.3s;
+        }
+
+        .upload-section:hover {
+            background: #dbeafe;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .controls {
+            margin: 25px 0;
+            display: none;
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .input-group label {
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .input-group input {
+            padding: 8px 12px;
+            width: 120px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 16px;
+            outline: none;
+        }
+
+        .btn-compress {
+            background: #3b82f6;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-compress:hover {
+            background: #2563eb;
+        }
+
+        .preview-section {
+            display: flex;
+            gap: 20px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+
+        .preview-box {
+            flex: 1;
+            min-width: 280px;
+            text-align: center;
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .preview-box img {
+            max-width: 100%;
+            max-height: 250px;
+            object-fit: contain;
+            margin-top: 12px;
+            border-radius: 6px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .info {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 5px;
+            color: #475569;
+        }
+
+        .btn-download {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 25px;
+            transition: 0.3s;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .btn-download:hover {
+            background: #059669;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Smart Image Compressor</h1>
+    <p class="subtitle">Website forms (50KB/200KB) ke liye photo ko perfect size me compress karein</p>
+    
+    <div class="upload-section" onclick="document.getElementById('fileInput').click()">
+        <p style="font-weight: 500; color: #1e40af;">Click karke phone ki heavy photo select karein</p>
+        <p style="font-size: 12px; color: #64748b; margin-top: 5px;">(Max size ki koi limit nahi hai)</p>
+        <input type="file" id="fileInput" accept="image/*">
+    </div>
+
+    <div class="controls" id="controls">
+        <div class="input-group">
+            <label for="targetSize">Target File Size:</label>
+            <input type="number" id="targetSize" value="200" min="10" max="5000">
+            <span><strong>KB</strong> se kam chahiye</span>
+            <button class="btn-compress" id="compressBtn">Compress Karein</button>
+        </div>
+        <p style="font-size: 12px; color: #64748b;">(Example: Agar website par max limit 200KB hai, toh yahan 200 likhein)</p>
+    </div>
+
+    <div class="preview-section" id="previewSection" style="display: none;">
+        <div class="preview-box">
+            <h3 style="color: #64748b;">Original Image</h3>
+            <div class="info" id="originalSize">Size: 0 KB</div>
+            <img id="originalPreview" alt="Original">
+        </div>
+        <div class="preview-box">
+            <h3 style="color: #1e3a8a;">Compressed Result</h3>
+            <div class="info" id="compressedSize" style="color: #10b981;">Size: 0 KB</div>
+            <img id="compressedPreview" alt="Compressed">
+        </div>
+    </div>
+
+    <a id="downloadBtn" class="btn-download" style="display: none;">Website Par Upload Karne Ke Liye Download Karein</a>
+</div>
+
+<script>
+    const fileInput = document.getElementById('fileInput');
+    const targetSizeInput = document.getElementById('targetSize');
+    const compressBtn = document.getElementById('compressBtn');
+    const controls = document.getElementById('controls');
+    const previewSection = document.getElementById('previewSection');
+    
+    const originalPreview = document.getElementById('originalPreview');
+    const compressedPreview = document.getElementById('compressedPreview');
+    
+    const originalSize = document.getElementById('originalSize');
+    const compressedSize = document.getElementById('compressedSize');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    let originalImg = new Image();
+
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        originalSize.innerText = `Size: ${(file.size / 1024).toFixed(2)} KB`;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            originalPreview.src = event.target.result;
+            originalImg.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+
+        originalImg.onload = function() {
+            controls.style.display = 'block';
+            previewSection.style.display = 'flex';
+            // Default target compress run karein
+            smartCompress();
+        };
+    });
+
+    compressBtn.addEventListener('click', smartCompress);
+
+    // Smart Algorithm: Size control karne ke liye
+    function smartCompress() {
+        const targetKB = parseFloat(targetSizeInput.value);
+        if (!targetKB || targetKB <= 0) {
+            alert("Kripya ek valid KB size dalein!");
+            return;
+        }
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let quality = 0.90;
+        let scale = 1.0;
+        let compressedDataUrl = "";
+        let fileSizeInBytes = Infinity;
+        
+        // Agar image bohot badi hai (like 10MB phone photo), pehle hi scale thoda kam kar dete hain safe compression ke liye
+        if (originalImg.naturalWidth > 2000) {
+            scale = 0.5; 
+        }
+
+        // Loop chalakar target size achieve karenge (Max 12 iterations taaki browser hang na ho)
+        for (let i = 0; i < 12; i++) {
+            canvas.width = originalImg.naturalWidth * scale;
+            canvas.height = originalImg.naturalHeight * scale;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(originalImg, 0, 0, canvas.width, canvas.height);
+
+            compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+            
+            // Size calculate karein
+            const head = 'data:image/jpeg;base64,';
+            fileSizeInBytes = Math.round((compressedDataUrl.length - head.length) * 3 / 4);
+            const currentKB = fileSizeInBytes / 1024;
+
+            // Agar desired target size mil gaya hai, toh loop break karein
+            if (currentKB <= targetKB) {
+                break;
+            }
+
+            // Agar size abhi bhi badi hai, toh scale aur quality dono dheere-dheere kam karein
+            scale *= 0.8;
+            quality *= 0.85;
+        }
+
+        // Update UI
+        compressedPreview.src = compressedDataUrl;
+        compressedSize.innerText = `Size: ${(fileSizeInBytes / 1024).toFixed(2)} KB`;
+
+        downloadBtn.href = compressedDataUrl;
+        downloadBtn.download = `form_ready_image.jpg`;
+        downloadBtn.style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
